@@ -13,11 +13,9 @@ from PO_ProductList_Final import ProductListPage
 try:
     PO_NAME = sys.argv[1]
     PO_EMAIL = sys.argv[2]
-    PO_ID = sys.argv[3]
 except IndexError:
     PO_NAME = "Unknown"
     PO_EMAIL = "Unknown"
-    PO_ID = "Unknown"
 
 class App(ctk.CTk):
     '''
@@ -28,18 +26,14 @@ class App(ctk.CTk):
     It sets the title, geometry, and main layout with a sidebar and content area.
     =====================================================================================================
     '''    
-    def __init__(self, owner_name = None, owner_email= None, owner_id = None):
+    def __init__(self, owner_name = None, owner_email= None):
         super().__init__()
         
         self.owner_name = owner_name
         self.owner_email = owner_email
-        self.owner_id = owner_id
 
         self.title("Shelf Life Management System - Product Owner")
-        #self.geometry("1920x1080")
-        self.attributes("-fullscreen", True)  # ← ✅ Make it full screen
-        self.bind("<Escape>", lambda event: self.attributes("-fullscreen", False))  # Optional: ESC to exit fullscreen
-
+        self.geometry("1920x1080")
         self.configure(fg_color="white")
 
         # Store current profile image path
@@ -60,10 +54,14 @@ class App(ctk.CTk):
 
         # Show home page by default
         self.show_frame("PO_Home")
-
-        print(type(self))
-
-
+    '''
+    =====================================================================================================
+    Function: def create_default_profile_image(self)
+    Description: 
+    This function creates a default profile image with a simple avatar design.
+    It uses PIL to draw a basic representation of a person with a head and body.
+    =====================================================================================================
+    '''
     def create_default_profile_image(self):
         """Create a default profile image with a basic avatar design"""
         size = self.profile_size  # Ensure this is set before this function is called
@@ -88,6 +86,7 @@ class App(ctk.CTk):
 
         # Convert to ImageTk.PhotoImage
         self.default_profile_tk = ImageTk.PhotoImage(img)
+
     '''
     =====================================================================================================
     Function: def create_sidebar(self)
@@ -107,7 +106,7 @@ class App(ctk.CTk):
         
         # Create profile label *after* image exists
         self.profile_label = ctk.CTkLabel(profile_container, text="", image=self.default_profile_tk)
-        self.profile_label.pack(pady=10)
+        self.profile_label.grid(row=0, column=0, padx=10, pady=10)
 
         if self.current_profile_image and os.path.exists(self.current_profile_image):
             self.display_profile_image(self.current_profile_image)
@@ -388,12 +387,10 @@ class App(ctk.CTk):
         self.frames = {}
         for F in (PO_Home, ProductRegistration, ProductListPage):
             page_name = F.__name__
-
-            if F == ProductRegistration or F == ProductListPage:
-                frame = F(parent=self.container, controller=self, owner_id=self.owner_id)
+            if F == PO_Home:
+                frame = F(parent=self.container, controller=self)
             else:
                 frame = F(parent=self.container, controller=self)
-
             frame.pack(fill="both", expand=True)
             frame.pack_forget()
             self.frames[page_name] = frame
@@ -438,7 +435,5 @@ class App(ctk.CTk):
 
 if __name__ == "__main__":
     ctk.set_appearance_mode("light")
-    app = App(PO_NAME, PO_EMAIL, PO_ID)
-    app.attributes("-fullscreen", True)  # Make it full screen
-
+    app = App(PO_NAME, PO_EMAIL)
     app.mainloop()

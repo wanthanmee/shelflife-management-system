@@ -1,14 +1,15 @@
 import tkinter as tk
 from customtkinter import CTk
 from PO_Login import LoginPage
-from PO_ProductRegister import ProductRegistrationPage 
+#from PO_ProductRegister import ProductRegistrationPage 
+#from C_ProductRegistrationWithDatabase import ProductRegistrationPage
 
 class MainApp(CTk):
     def __init__(self):
         super().__init__()
         
         # Configure the main window
-        self.title("Product Management System")
+        self.title("Shelf-life Study Management System")
         self.geometry("1920x1080")
         
         # Create a container frame for all pages
@@ -31,6 +32,7 @@ class MainApp(CTk):
         frame.place(x=0, y=0)
         frame.tkraise()
         
+    '''  
     def show_product_registration(self, owner_id=None):
         """Create and show the product registration page"""
         # Create the product registration page if it doesn't exist yet
@@ -39,6 +41,7 @@ class MainApp(CTk):
             self.frames["ProductRegistrationPage"] = product_page
         
         self.show_frame("ProductRegistrationPage")
+    '''
         
     def back_to_login(self):
         """Return to the login page"""

@@ -94,8 +94,12 @@ class ProductRegistration(CTkFrame):
     def save_data(self):
         productName = self.productName_var.get()
         description = self.description_var.get()
-        testingDate = self.testingDate_var.get()
-        maturityDate = self.maturityDate_var.get()
+        try:
+            testingDate = datetime.strptime(self.testingDate_var.get(), "%m/%d/%y").strftime("%Y-%m-%d")
+            maturityDate = datetime.strptime(self.maturityDate_var.get(), "%m/%d/%y").strftime("%Y-%m-%d")
+        except ValueError:
+            messagebox.showerror("Date Format Error", "Please enter valid dates.")
+            return
 
         if not productName or not description or not testingDate or not maturityDate:
             messagebox.showerror("Error", "All fields are required!")
