@@ -2,48 +2,53 @@ from customtkinter import *
 import tkinter as tk
 from PIL import Image, ImageTk
 from tkinter import messagebox, ttk
+from datetime import datetime
+import subprocess
+import sys
 import sqlite3
 
-# === Database Setup ===
-def setup_database():
-    #create a database connection and cursor
-    conn = sqlite3.connect('ProductRegistration.db') 
+'''
+=====================================================================================================
+Function: def setup_database()
+Description: 
+This function sets up the SQLite database for the user and product owners.
+It creates a database connection and cursor,
+creates the necessary tables if they don't exist,
+and inserts a default admin user if it doesn't exist.
+=====================================================================================================
+'''
+
+def alter_product_owners_table():
+    conn = sqlite3.connect('ProductRegistration.db')
     cursor = conn.cursor()
 
     try:
-        # Create a table if it doesn't exist
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS user (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                email TEXT NOT NULL,
-                password TEXT NOT NULL
-            )
-        ''')
-        cursor.execute("SELECT * FROM user WHERE email = 'admin'")
-        if cursor.fetchone() is None:
-            cursor.execute("INSERT INTO user (email, password) VALUES (?, ?)", ('admin', 'admin'))
-            
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS product_owners(
-                owner_id INTEGER PRIMARY KEY AUTOINCREMENT,
-                email TEXT NOT NULL, 
-                name TEXT NOT NULL
-            )
-        ''')
-
+        # Add new columns if they don't already exist
+        cursor.execute("ALTER TABLE product_owners ADD COLUMN status TEXT DEFAULT 'Pending'")
+        cursor.execute("ALTER TABLE product_owners ADD COLUMN registered_at TEXT")
         conn.commit()
+        print("Table altered successfully.")
 
-    except sqlite3.Error as e:
-        print(f"Error creating table: {e}")
-
+    except sqlite3.OperationalError as e:
+        if "duplicate column" in str(e):
+            print("Columns already exist.")
+        else:
+            print(f"Error altering table: {e}")
+    
     finally:
         cursor.close()
         conn.close()
-
-setup_database()
-
-#=== Page: Login ===
+        
+#=== Page Class: Login ===
 class LoginPage(CTkFrame):
+    '''
+    =====================================================================================================
+    Constructor: def __init__(self, parent, controller)
+    Description: 
+    This function initializes the LoginPage class.
+    It sets up the UI elements and initializes variables for user input.
+    =====================================================================================================
+    '''
     def __init__(self, parent, controller):
         super().__init__(parent)
         self.controller = controller
@@ -61,7 +66,15 @@ class LoginPage(CTkFrame):
         self.current_slide = 0
         
         self.build_ui()
-
+        '''
+    =====================================================================================================
+    Function: def login(self)
+    Description: 
+    This function handles the Login process. 
+    It retrieves the shared email and password from the entry fields,
+    checks them against the database, and shows the product owner form if successful.
+    =====================================================================================================
+    '''
     def login(self):
         email = self.user_email.get()
         password = self.user_password.get()
@@ -79,10 +92,19 @@ class LoginPage(CTkFrame):
 
         cursor.close()
         conn.close()
-
+    '''
+    =====================================================================================================
+    Function: def productOwner(self)
+    Description: 
+    This function handles the Product Owner registration process.
+    It retrieves the personal email and name from the entry fields,
+    checks if the email already exists in the database,
+    and registers the new user if it doesn't.
+    =====================================================================================================
+    '''
     def productOwner(self):
         # Get the email and name from the entry fields
-        p_email = self.owner_email.get().strip()  # Use strip() to remove any extra spaces
+        p_email = self.owner_email.get().strip()
         name = self.owner_name.get().strip()
 
         # Validate input
@@ -94,21 +116,58 @@ class LoginPage(CTkFrame):
         conn = sqlite3.connect('ProductRegistration.db')
         cursor = conn.cursor()
 
-        # Check if the email already exists for a product owner
-        cursor.execute("SELECT * FROM product_owners WHERE email=?", (p_email,))
-        result = cursor.fetchone()
+        try:
+            # Check if the email already exists
+            cursor.execute("SELECT owner_id, name, email FROM product_owners WHERE email=?", (p_email,))
+            result = cursor.fetchone()
 
-        if result:
-            messagebox.showinfo("Login Successful", "Welcome back!")
-            # Proceed to the next step or window if needed
-        else:
-            # Insert the new product owner into the database
-            cursor.execute("INSERT INTO product_owners (email, name) VALUES (?, ?)", (p_email, name))
-            conn.commit()  # Commit the changes to the database
-            messagebox.showinfo("Registration Successful", "Product owner registered successfully!")
+            if result:
+                owner_id, owner_name, owner_email = result
+                messagebox.showinfo("Login Successful", f"Welcome back, {owner_name}!")
 
-        cursor.close()
-        conn.close()
+                subprocess.Popen([
+                    sys.executable,
+                    "main_test3.py",
+                    owner_name,       # name first
+                    owner_email,      # email second
+                    str(owner_id)     # owner_id last
+                ])
+                self.master.destroy()
+
+            else:
+                # Register new user
+                registered_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                status = 'Pending'
+
+                cursor.execute('''
+                    INSERT INTO product_owners (email, name, status, registered_at)
+                    VALUES (?, ?, ?, ?)
+                ''', (p_email, name, status, registered_at))
+                conn.commit()
+
+                # Retrieve the new owner's ID
+                cursor.execute("SELECT owner_id FROM product_owners WHERE email=?", (p_email,))
+                owner_id = cursor.fetchone()[0]
+
+                messagebox.showinfo("Registration Successful", "Product owner registered successfully. Waiting for admin approval.")
+
+                subprocess.Popen([
+                    sys.executable,
+                    "main_test3.py",
+                    name,             # name first
+                    p_email,          # email second
+                    str(owner_id)     # owner_id last
+                ])
+                self.master.destroy()
+
+        except sqlite3.IntegrityError:
+            messagebox.showerror("Duplicate Error", "This email is already registered.")
+        except sqlite3.Error as e:
+            messagebox.showerror("Database Error", f"An error occurred: {e}")
+        finally:
+            cursor.close()
+            conn.close()
+
 
     def show_login(self):
         # Hide the product owner form and show the login form
@@ -126,10 +185,17 @@ class LoginPage(CTkFrame):
         self.slides[self.current_slide].place_forget()
         self.slides[index].place(x=0, y=0)
         self.current_slide = index
-
+    '''
+    =====================================================================================================
+    Function: def build_ui(self)
+    Description: 
+    This function builds the UI for the LoginPage.
+    It creates the layout, sets up the background image,
+    and initializes the fonts and UI elements.
+    =====================================================================================================
+    '''
     def build_ui(self):
         # Define screen dimensions
-        screen_width = 1920
         screen_height = 1080
 
         # Set the appearance mode and default color theme
@@ -161,7 +227,7 @@ class LoginPage(CTkFrame):
                 print(f"Error loading image: {e}")
 
         # Set background image
-        set_background_image(left_frame, "C:/Users/tanji/Downloads/login background.jpg", left_frame_width, screen_height)
+        set_background_image(left_frame, r"C:\Users\user\PycharmProjects\Semster 5\Software Engineering\Background\login_bg.jpg", left_frame_width, screen_height)
 
         # Fonts
         font_header = ("Arial", 56, "bold")
@@ -244,3 +310,15 @@ class LoginPage(CTkFrame):
         # Show the first slide
         self.show_slide(0)
 
+#Run the application frame in main window 
+if __name__ == "__main__":
+    app = CTk()  # Create the root window
+    app.geometry("1200x800")  # Set desired size
+    app.title("Shelf Life Management System - Login")
+    app.attributes("-fullscreen", True)  # Make it full screen
+
+    # Create and pack the frame into the window
+    product_page = LoginPage(app, None)
+    product_page.pack(fill="both", expand=True)
+
+    app.mainloop()  # Start the main loop
