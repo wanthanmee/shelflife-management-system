@@ -44,7 +44,7 @@ def generate_barcode(product_data):
     except Exception as e:
         raise Exception(f"Failed to generate barcode: {str(e)}")
 
-class ProductApprovalPage(CTkToplevel):
+class ProductDetailPage(CTkToplevel):
     def __init__(self, master, product_data):
         super().__init__(master)
         self.product_data = product_data  # Convert to list for easier modification
@@ -67,124 +67,6 @@ class ProductApprovalPage(CTkToplevel):
         # Title
         title_label = CTkLabel(main_frame, text="Product Approval", font=("Arial", 24))
         title_label.pack(pady=10)
-
-        '''
-        =====================================================================================================
-        SET UP STYLE FOR TREEVIEW
-        =====================================================================================================
-        '''
-        style = ttk.Style()
-        style.theme_use("clam")  # Switch to a theme that respects styling
-
-        # Set the font for the Treeview headings
-        bold_heading_font = tkfont.Font(family="Arial", size=12, weight="bold")
-        style.configure("Treeview.Heading", font=bold_heading_font)
-
-                # Configure Treeview heading style
-        style.configure("Treeview.Heading",
-        font= bold_heading_font,
-            foreground="#654633",  # Text color
-            background="#FEDEE9")  # Background color
-
-        style.map("Treeview",
-          background=[("selected", "#F8E5E5")],  # Light blue selection
-          foreground=[("selected", "#654633")])  # Dark text
-
-        # Search bar
-        search_frame = CTkFrame(self, fg_color="white")
-        search_frame.pack(pady=5, padx=20, fill="x")
-
-        # Search label
-        search_label = CTkLabel(search_frame, text="Search: ", font=("Arial", 16))
-        search_label.pack(side="left")
-
-        self.search_var = tk.StringVar()
-        self.search_var.trace("w", lambda *args: self.load_data()) #calls the load_data function automatically
-
-        self.search_entry = CTkEntry(
-        search_frame,
-        placeholder_text="Search Product Name",
-        textvariable=self.search_var
-        )
-        self.search_entry.pack(side="left", padx=(0, 10), fill="x", expand=True)
-        self.search_entry.bind("<KeyRelease>", lambda event: self.load_data())
-
-        # Status filter
-        self.status_filter_var = tk.StringVar(value="All")
-        self.status_dropdown = CTkOptionMenu(search_frame, values=["All", "Pending", "Approved", "Rejected"], 
-                                             variable=self.status_filter_var, 
-                                             font=("Arial", 16),
-                                             fg_color="#654633",
-                                             text_color="white",
-                                             command=lambda x: self.load_data())
-        self.status_dropdown.pack(side="left")
-
-        # Submission date filter
-        date_filter_frame = CTkFrame(self, fg_color="white")
-        date_filter_frame.pack(pady=5, padx=20, fill="x")
-
-        CTkLabel(date_filter_frame, text="From:", font=("Arial", 16)).pack(side="left")
-        self.start_date = DateEntry(date_filter_frame, width=12)
-        self.start_date.pack(side="left", padx=5)
-
-        CTkLabel(date_filter_frame, text="To:", font=("Arial", 16)).pack(side="left")
-        self.end_date = DateEntry(date_filter_frame, width=12)
-        self.end_date.pack(side="left", padx=5)
-
-        filter_button = CTkButton(date_filter_frame, text="Apply Date Filter", font=("Arial", 15), 
-                                 fg_color="#654633", 
-                                 hover_color="#FDC09A",
-                                 text_color="white", 
-                                 command=self.load_data)
-        filter_button.pack(side="left", padx=10)
-
-        # Treeview Frame
-        tree_frame = CTkFrame(self)
-        tree_frame.pack(padx=20, pady=10, fill="both", expand=True)
-
-        # Scrollbars
-        vsb = ttk.Scrollbar(tree_frame, orient="vertical")
-        hsb = ttk.Scrollbar(tree_frame, orient="horizontal")
-        
-        # Treeview
-        self.tree = ttk.Treeview(
-            tree_frame,
-            columns=("Batch_ID", "Product Name", "Description", "Submission Date", "Testing Date", "Maturity Date", "Test Completed", "Test_ID", "Test Result Location", "Date Updated", "Updated By"),
-            show="headings",
-            yscrollcommand=vsb.set,
-            xscrollcommand=hsb.set
-        )
-        self.tree.bind("<Double-1>", self.on_treeview_double_click)
-        vsb.config(command=self.tree.yview)
-        hsb.config(command=self.tree.xview)
-
-        # Layout
-        self.tree.grid(row=0, column=0, sticky="nsew")
-        vsb.grid(row=0, column=1, sticky="ns")
-        hsb.grid(row=1, column=0, sticky="ew")
-
-        tree_frame.grid_rowconfigure(0, weight=1)
-        tree_frame.grid_columnconfigure(0, weight=1)
-
-        for col in self.tree["columns"]:
-            self.tree.heading(col, text=col)
-            self.tree.column(col, anchor="center")
-
-        # Load data
-        self.load_data()
-
-        button_frame = CTkFrame(self, fg_color="white")
-        button_frame.pack(pady=10)
-
-        export_excel_btn = CTkButton(button_frame, text="EXCEL", font=("Arial", 18),
-                                     fg_color="#95d194", hover_color="#FDC09A",
-                                     command=self.export_to_excel)
-        export_excel_btn.pack(side="left", padx=10)
-
-        export_pdf_btn = CTkButton(button_frame, text="PDF", font=("Arial", 18),
-                                   fg_color="#f16c6c", hover_color="#FDC09A",
-                                    command=self.export_to_pdf)
-        export_pdf_btn.pack(side="left", padx=10)
 
         # Create two columns: details and barcode
         content_frame = CTkFrame(main_frame)
@@ -249,15 +131,19 @@ class ProductApprovalPage(CTkToplevel):
                 self.entry_widgets[label] = entry
             else:
                 # Non-editable field
-                CTkLabel(scrollable_frame, text=str(value), font=("Arial", 12)).grid(
-                    row=i, column=1, sticky="w", padx=10, pady=(10, 0))
+                value_label = CTkLabel(scrollable_frame, text=str(value), font=("Arial", 12))
+                value_label.grid(row=i, column=1, sticky="w", padx=10, pady=(10, 0))
+
+                # Save reference to status label
+                if label == "Status:":
+                    self.status_label = value_label
 
         canvas.pack(side="left", fill="both", expand=True)
         scrollbar.pack(side="right", fill="y")
 
         # Right column for barcode
-        barcode_frame = CTkFrame(content_frame)
-        barcode_frame.pack(side="right", fill="both", padx=(10, 0))
+        self.barcode_frame = CTkFrame(content_frame)
+        self.barcode_frame.pack(side="right", fill="both", padx=(10, 0))
 
         # Display barcode if it exists
         if self.product_data[14]:  # If barcode exists
@@ -272,11 +158,11 @@ class ProductApprovalPage(CTkToplevel):
                     
                     barcode_photo = ImageTk.PhotoImage(barcode_image)
                     
-                    barcode_label = CTkLabel(barcode_frame, image=barcode_photo, text="")
+                    barcode_label = CTkLabel(self.barcode_frame, image=barcode_photo, text="")
                     barcode_label.image = barcode_photo
                     barcode_label.pack(pady=10)
                     
-                    CTkLabel(barcode_frame, text=f"Barcode: {self.product_data[14]}", 
+                    CTkLabel(self.barcode_frame, text=f"Barcode: {self.product_data[14]}", 
                             font=("Arial", 12)).pack(pady=5)
             except Exception as e:
                 print(f"Error displaying barcode: {e}")
@@ -376,54 +262,93 @@ class ProductApprovalPage(CTkToplevel):
             messagebox.showerror("Error", f"Failed to update {label}: {str(e)}")
             print(f"Error details: {str(e)}")  # For debugging
 
+    def refresh_barcode_display(self):
+        # Clear barcode frame
+        for widget in self.barcode_frame.winfo_children():
+            widget.destroy()
+
+        barcode_data = self.product_data[14] if len(self.product_data) > 14 else None
+        barcode_path = self.product_data[15] if len(self.product_data) > 15 else None
+
+        if barcode_data and barcode_path and os.path.exists(barcode_path):
+            try:
+                barcode_image = Image.open(barcode_path)
+                max_width = 300
+                ratio = max_width / barcode_image.width
+                new_size = (max_width, int(barcode_image.height * ratio))
+                barcode_image = barcode_image.resize(new_size, Image.Resampling.LANCZOS)
+                barcode_photo = ImageTk.PhotoImage(barcode_image)
+
+                barcode_label = CTkLabel(self.barcode_frame, image=barcode_photo, text="")
+                barcode_label.image = barcode_photo  # Keep reference!
+                barcode_label.pack(pady=10)
+
+                CTkLabel(self.barcode_frame, text=f"Barcode: {barcode_data}",
+                        font=("Arial", 12)).pack(pady=5)
+
+            except Exception as e:
+                print(f"Error displaying barcode after refresh: {e}")
+
     def update_status(self, new_status):
         try:
-            conn = sqlite3.connect("ProductRegistration.db")
-            cursor = conn.cursor()
+            product_id = self.product_data[0]
 
-            # Get current status
-            cursor.execute("SELECT status FROM products WHERE id = ?", (self.product_data[0],))
-            current_status = cursor.fetchone()[0]
-
-            # If status is being changed to Approved, generate barcode
+            # Generate barcode first if status is being approved
             if new_status == "Approved" and self.product_data[13] != "Approved":
                 try:
+                    # Generate barcode (must not touch DB inside this function!)
                     barcode_data, barcode_path = generate_barcode(self.product_data)
-                    
-                    # Update the status and barcode in the database
-                    cursor.execute(
-                        "UPDATE products SET status = ?, barcode = ? WHERE id = ?",
-                        (new_status, barcode_data, self.product_data[0])
-                    )
-                    
-                    # Show success message with barcode info
-                    messagebox.showinfo("Success", 
-                        f"Product approved and barcode generated successfully!\n"
-                        f"Barcode: {barcode_data}\n"
-                        f"Saved as: {barcode_path}")
+
+                    # Now update everything inside one database transaction
+                    with sqlite3.connect("ProductRegistration.db", timeout=10) as conn:
+                        cursor = conn.cursor()
+                        cursor.execute(
+                            "UPDATE products SET status = ?, barcode_data = ?, barcode_path = ? WHERE id = ?",
+                            (new_status, barcode_data, barcode_path, product_id)
+                        )
+
+                    # Update local product_data list
+                    self.product_data[13] = new_status
+                    self.product_data[14] = barcode_data
+                    if len(self.product_data) > 15:
+                        self.product_data[15] = barcode_path
+                    else:
+                        self.product_data.append(barcode_path)
+
+                    messagebox.showinfo("Success",
+                        f"Product approved and barcode generated!\n"
+                        f"Barcode: {barcode_data}\nSaved to: {barcode_path}")
+
+                    self.refresh_barcode_display()
+
                 except Exception as e:
-                    messagebox.showerror("Error", f"Failed to generate barcode: {str(e)}")
+                    messagebox.showerror("Barcode Error", f"Failed to generate barcode:\n{e}")
                     return
+
             else:
-                # Just update the status
-                cursor.execute(
-                    "UPDATE products SET status = ? WHERE id = ?",
-                    (new_status, self.product_data[0])
-                )
+                # Just update status
+                with sqlite3.connect("ProductRegistration.db", timeout=10) as conn:
+                    cursor = conn.cursor()
+                    cursor.execute(
+                        "UPDATE products SET status = ? WHERE id = ?",
+                        (new_status, product_id)
+                    )
+                self.product_data[13] = new_status
 
-            conn.commit()
-            conn.close()
+            # Update the status label in the UI
+            if hasattr(self, "status_label"):
+                self.status_label.configure(text=new_status)
 
-            # Update the status in the product_data
-            self.product_data = list(self.product_data)
-            self.product_data[13] = new_status
-
-            # Refresh the main window's data
-            if hasattr(self.master, 'load_data'):
-                self.master.load_data()
+                # Optionally color it based on status
+                if new_status == "Approved":
+                    self.status_label.configure(text_color="green")
+                elif new_status == "Rejected":
+                    self.status_label.configure(text_color="red")
+                else:
+                    self.status_label.configure(text_color="black")
 
         except Exception as e:
-            messagebox.showerror("Error", f"Failed to update status: {e}")
+            messagebox.showerror("Database Error", f"Failed to update status:\n{e}")
 
     def approve_owner(self):
         if messagebox.askyesno("Confirm Approval", "Are you sure you want to approve this product?"):
@@ -500,7 +425,7 @@ class ProductApprovalPage(CTkToplevel):
             values = self.tree.item(selected_item)["values"]
             if values:
                     product_data = list(values)
-                    ProductApprovalPage(self, product_data)
+                    ProductDetailPage(self, product_data)
 
     '''
     =====================================================================================================
@@ -619,6 +544,78 @@ class ProductApprovalPage(CTkToplevel):
         except Exception as e:
             messagebox.showerror("Export Error", str(e))
 
+class ProductListPage(CTkFrame):
+    def __init__(self, master):
+        super().__init__(master)
+        self.master = master
+        self.pack(fill="both", expand=True)
+        self.build_ui()
+
+    def build_ui(self):
+        # Search + Filter Frame
+        filter_frame = CTkFrame(self)
+        filter_frame.pack(pady=10, fill="x")
+
+        CTkLabel(filter_frame, text="Search: ").pack(side="left")
+        self.search_var = tk.StringVar()
+        self.search_var.trace("w", lambda *_: self.load_data())
+        CTkEntry(filter_frame, textvariable=self.search_var, placeholder_text="Search by Product Name").pack(side="left", fill="x", expand=True, padx=10)
+
+        self.status_filter = tk.StringVar(value="All")
+        CTkOptionMenu(filter_frame, values=["All", "Pending", "Approved", "Denied"], variable=self.status_filter, command=lambda x: self.load_data()).pack(side="left", padx=5)
+
+        # Treeview for products
+        tree_frame = CTkFrame(self)
+        tree_frame.pack(fill="both", expand=True, padx=10, pady=10)
+
+        self.tree = ttk.Treeview(tree_frame, show="headings", columns=(
+            "id", "batch_id", "product_name", "description", "submission_date",
+            "testing_date", "maturity_date", "test_completed", "test_id",
+            "test_result_location", "date_updated", "updated_by", "owner_id", "status", "barcode"
+        ))
+        for col in self.tree["columns"]:
+            self.tree.heading(col, text=col)
+            self.tree.column(col, anchor="center")
+
+        self.tree.pack(fill="both", expand=True)
+        self.tree.bind("<Double-1>", self.open_detail_popup)
+
+        self.load_data()
+
+    def load_data(self):
+        try:
+            conn = sqlite3.connect("ProductRegistration.db")
+            cursor = conn.cursor()
+
+            query = "SELECT * FROM products WHERE 1=1"
+            params = []
+
+            if self.search_var.get().strip():
+                query += " AND product_name LIKE ?"
+                params.append(f"%{self.search_var.get().strip()}%")
+
+            if self.status_filter.get() != "All":
+                query += " AND status = ?"
+                params.append(self.status_filter.get())
+
+            cursor.execute(query, params)
+            rows = cursor.fetchall()
+            conn.close()
+
+            for item in self.tree.get_children():
+                self.tree.delete(item)
+
+            for row in rows:
+                self.tree.insert("", "end", values=row)
+        except Exception as e:
+            messagebox.showerror("Database Error", f"Could not load data: {e}")
+
+    def open_detail_popup(self, event):
+        selected_item = self.tree.focus()
+        if selected_item:
+            product_data = self.tree.item(selected_item)["values"]
+            if product_data:
+                ProductDetailPage(self, product_data)  # Open the popup
 
 '''
 =====================================================================================================
@@ -629,13 +626,11 @@ It sets the appearance mode and default color theme, creates the main window, an
 '''
 if __name__ == "__main__":
     app = CTk()
-    app.geometry("800x800")
+    app.geometry("1200x800")
     set_appearance_mode("light")
-    app.title("Product List")
+    app.title("Admin - Product Approval Dashboard")
 
-    # Load your main dashboard (that includes the TreeView)
-    main_page = ProductApprovalPage(app)
-    main_page.pack(fill="both", expand=True)
+    ProductListPage(app)  # Show the list page
 
     app.mainloop()
    
